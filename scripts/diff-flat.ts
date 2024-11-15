@@ -52,7 +52,11 @@ const flattenObject = (
 
       if (typeof obj[key] === 'object' && obj[key] !== null) {
         // Recursively flatten nested objects
-        flattenObject(obj[key], fullKey, result);
+        flattenObject(
+          key === 'notes' && !Array.isArray(obj[key]) ? [obj[key]] : obj[key],
+          fullKey,
+          result,
+        );
       } else {
         // Assign value to the flattened key
         result[fullKey] = obj[key];
