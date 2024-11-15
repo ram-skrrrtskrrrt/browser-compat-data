@@ -78,6 +78,10 @@ const printDiffs = (
   head = '',
   options: { html: boolean },
 ): void => {
+  if (options.html) {
+    console.log('<div style="font-family: monospace">');
+  }
+
   for (const status of getGitDiffStatuses(base, head)) {
     if (!status.headPath.endsWith('.json') || !status.headPath.includes('/')) {
       continue;
@@ -141,16 +145,33 @@ const printDiffs = (
           })
           .join('.');
 
+        const value = [
+          (baseData[key] ?? null) &&
+            (options.html
+              ? `<del style="color: red">${baseValue}</del>`
+              : chalk`{red ${baseValue}}`),
+          (headData[key] ?? null) &&
+            (options.html
+              ? `<ins style="color: green">${headValue}</ins>`
+              : chalk`{green ${headValue}}`),
+        ]
+          .filter(Boolean)
+          .join(' → ');
+
         console.log(
           options.html
-            ? `${keyDiff} = <del>${baseValue}</del> → <ins>${headValue}</ins><br />`
-            : chalk`${keyDiff} = {red ${baseValue}} → {green ${headValue}}`,
+            ? `${keyDiff} = ${value}<br />`
+            : chalk`${keyDiff} = ${value}`,
         );
         lastKey = key;
       }
 
       console.log('');
     }
+  }
+
+  if (options.html) {
+    console.log('</div>');
   }
 };
 
