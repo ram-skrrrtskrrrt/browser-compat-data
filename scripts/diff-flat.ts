@@ -145,7 +145,8 @@ const printDiffs = (
           })
           .join('.');
 
-        const hasValue = (value: any) => typeof value === 'boolean' || !!value;
+        const hasValue = (value: any) =>
+          typeof value === 'boolean' || (!!value && value !== 'mirror');
 
         const value = [
           hasValue(baseData[key] ?? null) &&
@@ -159,6 +160,11 @@ const printDiffs = (
         ]
           .filter(Boolean)
           .join(' → ');
+
+        if (!value.length) {
+          // e.g. null => "mirror"
+          continue;
+        }
 
         console.log(
           options.html
