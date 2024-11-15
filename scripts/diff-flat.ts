@@ -50,11 +50,7 @@ const flattenObject = (
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       const fullKey = parentKey ? `${parentKey}.${key}` : key;
 
-      if (
-        typeof obj[key] === 'object' &&
-        obj[key] !== null &&
-        !Array.isArray(obj[key])
-      ) {
+      if (typeof obj[key] === 'object' && obj[key] !== null) {
         // Recursively flatten nested objects
         flattenObject(obj[key], fullKey, result);
       } else {
