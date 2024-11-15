@@ -145,12 +145,14 @@ const printDiffs = (
           })
           .join('.');
 
+        const hasValue = (value: any) => typeof value === 'boolean' || !!value;
+
         const value = [
-          (baseData[key] ?? null) &&
+          hasValue(baseData[key] ?? null) &&
             (options.html
               ? `<del style="color: red">${baseValue}</del>`
               : chalk`{red ${baseValue}}`),
-          (headData[key] ?? null) &&
+          hasValue(headData[key] ?? null) &&
             (options.html
               ? `<ins style="color: green">${headValue}</ins>`
               : chalk`{green ${headValue}}`),
