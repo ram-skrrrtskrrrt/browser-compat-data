@@ -185,7 +185,16 @@ const diffKeys = (
 ): string => {
   const len = key.length;
   let fill = options.fill ?? 0;
-  return diffArrays(lastKey.split('.'), key.split('.'))
+  /**
+   * Filters out irrelevant keys.
+   * @param part the key part.
+   * @returns true, if the part should be ignored, false otherwise
+   */
+  const keyFilter = (part) => part !== '__compat' && part !== 'support';
+  return diffArrays(
+    lastKey.split('.').filter(keyFilter),
+    key.split('.').filter(keyFilter),
+  )
     .filter((part) => !part.removed)
     .map((part) => {
       const key = part.value.join('.');
@@ -311,9 +320,13 @@ const printDiffs = (
           const groupKey = `${!browser ? '' : options.html ? `<strong>${browser}</strong>.` : chalk`{cyan ${browser}}.`}${field} = ${value}`;
           const groupValue = key
             .split('.')
-            .map((part) =>
-              part !== browser && part !== field
-                ? part
+            .map((part) => (part !== browser && part !== field ? part : '{}'))
+            .reverse()
+            .filter((value, index) => index > 0 || value !== '{}')
+            .reverse()
+            .map((value) =>
+              value !== '{}'
+                ? value
                 : options.html
                   ? '<small>{}</small>'
                   : chalk`{dim \{\}}`,
