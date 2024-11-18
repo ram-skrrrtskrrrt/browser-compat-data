@@ -34,6 +34,17 @@ const getBaseAndHeadContents = (
   return { base, head };
 };
 
+const BROWSER_NAMES = [
+  'chrome',
+  'chrome_android',
+  'edge',
+  'firefox',
+  'firefox_android',
+  'safari',
+  'safari_ios',
+  'webview_android',
+];
+
 /**
  * Flattens an object.
  * @param obj the object to flatten.
@@ -57,15 +68,7 @@ const flattenObject = (
       } else if (typeof obj[key] === 'object' && obj[key] !== null) {
         // Recursively flatten nested objects
         flattenObject(
-          [
-            'chrome',
-            'chrome_android',
-            'edge',
-            'firefox',
-            'safari',
-            'safari_ios',
-            'webview_android',
-          ].includes(key)
+          BROWSER_NAMES.includes(key)
             ? toArray(obj[key]).reverse()
             : key === 'notes'
               ? toArray(obj[key])
@@ -105,8 +108,8 @@ const toArray = (value: any): any[] => {
  * @returns diffed key
  */
 const diffKeys = (
-  lastKey: string,
   key: string,
+  lastKey: string,
   options: { html: boolean },
 ): string =>
   diffArrays(lastKey.split('.'), key.split('.'))
@@ -221,9 +224,25 @@ const printDiffs = (
         }
 
         if (options.group) {
-          const group = groups.get(value) ?? new Set();
-          group.add(key);
-          groups.set(value, group);
+          const reverseKeyParts = key.split('.').reverse();
+          const browser = reverseKeyParts.find((part) =>
+            BROWSER_NAMES.includes(part),
+          );
+          const field = reverseKeyParts.find((part) => !/^\d+$/.test(part));
+          const groupKey = `${browser ? `[${browser}] ` : ''}${field} = ${value}`;
+          const groupValue = key
+            .split('.')
+            .map((part) =>
+              part !== browser && part !== field
+                ? part
+                : options.html
+                  ? '<small>{}</small>'
+                  : chalk`{grey \{\}}`,
+            )
+            .join('.');
+          const group = groups.get(groupKey) ?? new Set();
+          group.add(groupValue);
+          groups.set(groupKey, group);
         } else {
           const change = options.html
             ? `${keyDiff} = ${value}<br />`
