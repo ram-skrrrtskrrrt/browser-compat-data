@@ -104,26 +104,35 @@ const toArray = (value: any): any[] => {
  * @param key the current key
  * @param lastKey the previous key
  * @param options Options
+ * @param options.fill The number of characters to fill up to
  * @param options.html Whether to return HTML, otherwise plaintext
  * @returns diffed key
  */
 const diffKeys = (
   key: string,
   lastKey: string,
-  options: { html: boolean },
-): string =>
-  diffArrays(lastKey.split('.'), key.split('.'))
+  options: { fill?: number; html: boolean },
+): string => {
+  const len = key.length;
+  let fill = options.fill ?? 0;
+  return diffArrays(lastKey.split('.'), key.split('.'))
     .filter((part) => !part.removed)
     .map((part) => {
       const key = part.value.join('.');
 
       if (part.added) {
-        return options.html ? `<strong>${key}</strong>` : chalk`{blue ${key}}`;
+        const space = fill && len < fill ? ' '.repeat(fill - len) : '';
+        fill = 0;
+        return (
+          (options.html ? `<strong>${key}</strong>` : chalk`{blue ${key}}`) +
+          space
+        );
       }
 
       return key;
     })
     .join('.');
+};
 
 /**
  * Print diffs
@@ -229,7 +238,7 @@ const printDiffs = (
             BROWSER_NAMES.includes(part),
           );
           const field = reverseKeyParts.find((part) => !/^\d+$/.test(part));
-          const groupKey = `${browser ? `[${browser}] ` : ''}${field} = ${value}`;
+          const groupKey = `${!browser ? '' : options.html ? `<strong>${browser}<strong> → ` : chalk`{cyan ${browser}} → `}${field} = ${value}`;
           const groupValue = key
             .split('.')
             .map((part) =>
@@ -237,7 +246,7 @@ const printDiffs = (
                 ? part
                 : options.html
                   ? '<small>{}</small>'
-                  : chalk`{grey \{\}}`,
+                  : chalk`{dim \{\}}`,
             )
             .join('.');
           const group = groups.get(groupKey) ?? new Set();
@@ -281,31 +290,34 @@ const printDiffs = (
       if (keys.length == 1) {
         const key = keys.at(0) as string;
         const keyDiff = diffKeys(key, previousKey ?? key, options);
-        console.log(`${keyDiff}: ${value}`);
+        console.log(`${keyDiff}:\n  ${value}`);
         previousKey = key;
       } else {
-        previousKey = keys.at(0) as string;
+        previousKey = null;
+        const maxKeyLength = Math.max(...keys.map((key) => key.length));
         for (const key of keys) {
-          const keyDiff = diffKeys(key, previousKey, options);
+          const keyDiff = diffKeys(key, previousKey ?? (keys.at(1) as string), {
+            ...options,
+            fill: maxKeyLength,
+          });
           console.log(keyDiff);
           previousKey = key;
         }
         console.log(`  ${value}`);
-        console.log();
         previousKey = null;
       }
     } else {
       const [key, values] = entry;
       if (values.length == 1) {
         const keyDiff = diffKeys(key, previousKey ?? key, options);
-        console.log(`${keyDiff}: ${values.at(0)}`);
+        console.log(`${keyDiff}:\n  ${values.at(0)}`);
         previousKey = key;
       } else {
         console.log(key);
         values.forEach((value) => console.log(`  ${value}`));
-        console.log();
       }
     }
+    console.log();
   }
 
   if (options.html) {
