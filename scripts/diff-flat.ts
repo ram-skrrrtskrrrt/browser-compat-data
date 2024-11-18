@@ -49,6 +49,21 @@ const BROWSER_NAMES = [
 
 // FIXME This is bad.
 const allFlags: string[] = [];
+const allNotes: string[] = [];
+
+/**
+ * Formats a flag reference.
+ * @param index the flag index.
+ * @returns formatted reference.
+ */
+const formatFlagIndex = (index: number): string => `[^f${index + 1}]`;
+
+/**
+ * Formats a flag reference.
+ * @param index the flag index.
+ * @returns formatted reference.
+ */
+const formatNoteIndex = (index: number): string => `[^n${index + 1}]`;
 
 /**
  * Flattens an object.
@@ -76,7 +91,23 @@ const flattenObject = (
               allFlags.push(flagsJson);
             }
             const flagIndex = allFlags.indexOf(flagsJson);
-            obj[key].flags = `†${flagIndex}`;
+            obj[key].flags = formatFlagIndex(flagIndex);
+          }
+
+          if ('notes' in obj[key]) {
+            const notes = toArray(obj[key].notes);
+            obj[key].notes = notes
+              .map((note) => {
+                const notesJson = JSON.stringify(note);
+                if (!allNotes.includes(notesJson)) {
+                  allNotes.push(notesJson);
+                }
+                const noteIndex = allNotes.indexOf(notesJson);
+                return noteIndex;
+              })
+              .sort()
+              .map((index) => formatNoteIndex(index))
+              .join(',');
           }
 
           const {
@@ -86,17 +117,17 @@ const flattenObject = (
             alternative_name,
             prefix,
             flags,
+            notes,
           } = obj[key] as SimpleSupportStatement;
 
           const parts = [
-            version_added &&
-              version_removed &&
-              `${version_added} - ${version_removed}`,
-            version_added && !version_removed && `since ${version_added}`,
+            version_added && version_added && `added ${version_added}`,
+            version_removed && `removed ${version_removed}`,
             partial_implementation && '(partial)',
             flags,
             prefix && `prefix=${prefix}`,
             alternative_name && `altname=${alternative_name}`,
+            notes,
           ].filter(Boolean);
 
           obj[key].version = parts.join(' ');
@@ -106,15 +137,12 @@ const flattenObject = (
           delete obj[key].alternative_name;
           delete obj[key].prefix;
           delete obj[key].flags;
+          delete obj[key].notes;
         }
 
         // Recursively flatten nested objects
         flattenObject(
-          BROWSER_NAMES.includes(key)
-            ? toArray(obj[key]).reverse()
-            : key === 'notes'
-              ? toArray(obj[key])
-              : obj[key],
+          BROWSER_NAMES.includes(key) ? toArray(obj[key]).reverse() : obj[key],
           fullKey,
           result,
         );
@@ -190,7 +218,7 @@ const printDiffs = (
   options: { group: boolean; html: boolean },
 ): void => {
   if (options.html) {
-    console.log('<div style="font-family: monospace">');
+    console.log('<pre style="font-family: monospace">');
   }
 
   const groups = new Map<string, Set<string>>();
@@ -267,7 +295,7 @@ const printDiffs = (
               : chalk`{green ${headValue}}`)) ||
           '';
 
-        const value = [oldValue, newValue].filter(Boolean).join(' → ');
+        const value = [newValue, oldValue].filter(Boolean).join(' ← ');
 
         if (!value.length) {
           // e.g. null => "mirror"
@@ -280,7 +308,7 @@ const printDiffs = (
             BROWSER_NAMES.includes(part),
           );
           const field = reverseKeyParts.find((part) => !/^\d+$/.test(part));
-          const groupKey = `${!browser ? '' : options.html ? `<strong>${browser}<strong> → ` : chalk`{cyan ${browser}} → `}${field} = ${value}`;
+          const groupKey = `${!browser ? '' : options.html ? `<strong>${browser}</strong>.` : chalk`{cyan ${browser}}.`}${field} = ${value}`;
           const groupValue = key
             .split('.')
             .map((part) =>
@@ -296,7 +324,7 @@ const printDiffs = (
           groups.set(groupKey, group);
         } else {
           const change = options.html
-            ? `${keyDiff} = ${value}<br />`
+            ? `${keyDiff} = ${value}`
             : chalk`${keyDiff} = ${value}`;
           const group = groups.get(commonName) ?? new Set();
           group.add(change);
@@ -324,6 +352,18 @@ const printDiffs = (
     JSON.parse(valuesJson),
   ]);
 
+  const json = JSON.stringify(entries);
+  for (const flagIndex of allFlags.keys()) {
+    if (!json.includes(formatFlagIndex(flagIndex))) {
+      allFlags[flagIndex] = '';
+    }
+  }
+  for (const noteIndex of allNotes.keys()) {
+    if (!json.includes(formatNoteIndex(noteIndex))) {
+      allNotes[noteIndex] = '';
+    }
+  }
+
   if (options.group) {
     entries.sort(
       ([k1, v1], [k2, v2]) => k2.length * v2.length - k1.length * v1.length,
@@ -340,6 +380,13 @@ const printDiffs = (
     });
   }
 
+  /**
+   * Prints to stdout.
+   * @param line the line to print
+   * @returns nothing
+   */
+  const print = (line = ''): void => console.log(line);
+
   for (const entry of entries) {
     let previousKey: string | null = null;
     if (options.group) {
@@ -347,20 +394,28 @@ const printDiffs = (
       if (keys.length == 1) {
         const key = keys.at(0) as string;
         const keyDiff = diffKeys(key, previousKey ?? key, options);
-        values.forEach((value) => console.log(`${value}`));
-        console.log(`  ${keyDiff}`);
+        values.forEach((value) => print(`${value}`));
+        print(`  ${keyDiff}`);
         previousKey = key;
       } else {
         previousKey = null;
-        values.forEach((value) => console.log(`${value}`));
+        console.log(values.join('\n'));
         const maxKeyLength = Math.max(...keys.map((key) => key.length));
+        if (options.html && keys.length > 1) {
+          process.stdout.write(
+            `<details><summary>${keys.length} paths</summary>`,
+          );
+        }
         for (const key of keys) {
           const keyDiff = diffKeys(key, previousKey ?? (keys.at(1) as string), {
             ...options,
             fill: maxKeyLength,
           });
-          console.log(`  ${keyDiff}`);
+          print(`  ${keyDiff}`);
           previousKey = key;
+        }
+        if (options.html && keys.length > 1) {
+          process.stdout.write('</details>');
         }
         previousKey = null;
       }
@@ -369,32 +424,47 @@ const printDiffs = (
       if (values.length == 1) {
         for (const key of keys) {
           const keyDiff = diffKeys(key, previousKey ?? key, options);
-          console.log(`${keyDiff}`);
+          print(`${keyDiff}`);
           previousKey = key;
         }
-        values.forEach((value) => console.log(`  ${value}`));
+        values.forEach((value) => print(`  ${value}`));
       } else {
         for (const key of keys) {
           const keyDiff = diffKeys(key, previousKey ?? key, options);
-          console.log(`${keyDiff}`);
+          print(`${keyDiff}`);
           previousKey = key;
         }
-        values.forEach((value) => console.log(`  ${value}`));
+        values.forEach((value) => print(`  ${value}`));
       }
       previousKey = null;
     }
-    console.log();
+    print('');
   }
 
-  if (allFlags.length > 0) {
-    console.log('Flags:');
+  if (allFlags.some(Boolean)) {
+    print('Flags:');
     for (const [index, flagsJson] of allFlags.entries()) {
-      console.log(`†${index} = ${flagsJson}`);
+      if (!flagsJson) {
+        continue;
+      }
+      print(`${formatFlagIndex(index)}: ${flagsJson}`);
     }
+    print();
+  }
+
+  if (allNotes.some(Boolean)) {
+    print('Notes:');
+    for (const [index, notesJson] of allNotes.entries()) {
+      if (!notesJson) {
+        continue;
+      }
+      print(`${formatNoteIndex(index)}: ${notesJson}`);
+    }
+    print();
   }
 
   if (options.html) {
-    console.log('</div>');
+    console.log('</pre>');
   }
 };
 
