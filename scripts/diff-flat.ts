@@ -7,7 +7,7 @@ import esMain from 'es-main';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
-import { FlagStatement } from '../types/types.js';
+import { SimpleSupportStatement } from '../types/types.js';
 
 import { getMergeBase, getFileContent, getGitDiffStatuses } from './lib/git.js';
 
@@ -68,15 +68,44 @@ const flattenObject = (
 
       if (typeof obj[key] === 'object' && obj[key] !== null) {
         // Merge values.
-        if ('version_added' in obj[key] && 'flags' in obj[key]) {
-          const { flags } = obj[key];
-          delete obj[key].flags;
-          const flagsJson = JSON.stringify(flags);
-          if (!allFlags.includes(flagsJson)) {
-            allFlags.push(flagsJson);
+        if ('version_added' in obj[key]) {
+          if ('flags' in obj[key]) {
+            // Deduplicate flag.
+            const flagsJson = JSON.stringify(obj[key].flags);
+            if (!allFlags.includes(flagsJson)) {
+              allFlags.push(flagsJson);
+            }
+            const flagIndex = allFlags.indexOf(flagsJson);
+            obj[key].flags = `†${flagIndex}`;
           }
-          const flagIndex = allFlags.indexOf(flagsJson);
-          obj[key].version_added += ` f${flagIndex}`;
+
+          const {
+            version_added,
+            version_removed,
+            partial_implementation,
+            alternative_name,
+            prefix,
+            flags,
+          } = obj[key] as SimpleSupportStatement;
+
+          const parts = [
+            version_added &&
+              version_removed &&
+              `${version_added} - ${version_removed}`,
+            version_added && !version_removed && `since ${version_added}`,
+            partial_implementation && '(partial)',
+            flags,
+            prefix && `prefix=${prefix}`,
+            alternative_name && `altname=${alternative_name}`,
+          ].filter(Boolean);
+
+          obj[key].version = parts.join(' ');
+          delete obj[key].version_added;
+          delete obj[key].version_removed;
+          delete obj[key].partial_implementation;
+          delete obj[key].alternative_name;
+          delete obj[key].prefix;
+          delete obj[key].flags;
         }
 
         // Recursively flatten nested objects
@@ -360,7 +389,7 @@ const printDiffs = (
   if (allFlags.length > 0) {
     console.log('Flags:');
     for (const [index, flagsJson] of allFlags.entries()) {
-      console.log(` f${index} = ${flagsJson}`);
+      console.log(`†${index} = ${flagsJson}`);
     }
   }
 
