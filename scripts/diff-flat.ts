@@ -7,6 +7,8 @@ import esMain from 'es-main';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
+import { FlagStatement } from '../types/types.js';
+
 import { getMergeBase, getFileContent, getGitDiffStatuses } from './lib/git.js';
 
 interface Contents {
@@ -45,6 +47,9 @@ const BROWSER_NAMES = [
   'webview_android',
 ];
 
+// FIXME This is bad.
+const allFlags: string[] = [];
+
 /**
  * Flattens an object.
  * @param obj the object to flatten.
@@ -61,11 +66,19 @@ const flattenObject = (
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       const fullKey = parentKey ? `${parentKey}.${key}` : key;
 
-      if (key == 'flags') {
-        result[fullKey] = toArray(obj[key]).map((value) =>
-          JSON.stringify(value),
-        );
-      } else if (typeof obj[key] === 'object' && obj[key] !== null) {
+      if (typeof obj[key] === 'object' && obj[key] !== null) {
+        // Merge values.
+        if ('version_added' in obj[key] && 'flags' in obj[key]) {
+          const { flags } = obj[key];
+          delete obj[key].flags;
+          const flagsJson = JSON.stringify(flags);
+          if (!allFlags.includes(flagsJson)) {
+            allFlags.push(flagsJson);
+          }
+          const flagIndex = allFlags.indexOf(flagsJson);
+          obj[key].version_added += ` f${flagIndex}`;
+        }
+
         // Recursively flatten nested objects
         flattenObject(
           BROWSER_NAMES.includes(key)
@@ -342,6 +355,13 @@ const printDiffs = (
       previousKey = null;
     }
     console.log();
+  }
+
+  if (allFlags.length > 0) {
+    console.log('Flags:');
+    for (const [index, flagsJson] of allFlags.entries()) {
+      console.log(` f${index} = ${flagsJson}`);
+    }
   }
 
   if (options.html) {
