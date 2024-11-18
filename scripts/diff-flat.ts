@@ -121,8 +121,8 @@ const flattenObject = (
           } = obj[key] as SimpleSupportStatement;
 
           const parts = [
-            version_added && version_added && `added ${version_added}`,
-            version_removed && `removed ${version_removed}`,
+            version_added && version_added && `${version_added}+`,
+            version_removed && `−${version_removed}`,
             partial_implementation && '(partial)',
             flags,
             prefix && `prefix=${prefix}`,
@@ -365,9 +365,7 @@ const printDiffs = (
   }
 
   if (options.group) {
-    entries.sort(
-      ([k1, v1], [k2, v2]) => k2.length * v2.length - k1.length * v1.length,
-    );
+    entries.sort();
     /**
      * Reverses a key (e.g. "a.b.c" => "c.b.a").
      * @param key the key to reverse.
@@ -401,9 +399,9 @@ const printDiffs = (
         previousKey = null;
         console.log(values.join('\n'));
         const maxKeyLength = Math.max(...keys.map((key) => key.length));
-        if (options.html && keys.length > 1) {
+        if (options.html) {
           process.stdout.write(
-            `<details><summary>${keys.length} paths</summary>`,
+            `<details><summary>${keys.length} ${keys.length === 1 ? 'path' : 'paths'}</summary>`,
           );
         }
         for (const key of keys) {
@@ -414,7 +412,7 @@ const printDiffs = (
           print(`  ${keyDiff}`);
           previousKey = key;
         }
-        if (options.html && keys.length > 1) {
+        if (options.html) {
           process.stdout.write('</details>');
         }
         previousKey = null;
