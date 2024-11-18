@@ -2,7 +2,7 @@
  * See LICENSE file for more information. */
 
 import chalk from 'chalk-template';
-import { diffArrays, diffWords } from 'diff';
+import { diffArrays } from 'diff';
 import esMain from 'es-main';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
@@ -83,6 +83,11 @@ const flattenObject = (
   return result;
 };
 
+/**
+ * Converts value to array unless it isn't.
+ * @param value array or any value.
+ * @returns the array, or an array with the value as a single item.
+ */
 const toArray = (value: any): any[] => {
   if (!Array.isArray(value)) {
     value = [value];
@@ -96,6 +101,7 @@ const toArray = (value: any): any[] => {
  * @param base Base ref
  * @param head Head ref
  * @param options Options
+ * @param options.html
  */
 const printDiffs = (
   base: string,
@@ -169,6 +175,11 @@ const printDiffs = (
           })
           .join('.');
 
+        /**
+         * Checks whether the value is a relevant value.
+         * @param value the value.
+         * @returns TRUE if the value is relevant, FALSE otherwise.
+         */
         const hasValue = (value: any) =>
           typeof value === 'boolean' || (!!value && value !== 'mirror');
 
