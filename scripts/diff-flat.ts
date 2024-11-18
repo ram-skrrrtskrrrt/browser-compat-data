@@ -265,12 +265,27 @@ const printDiffs = (
     }
   }
 
-  const entries: [string, string[]][] = [...groups.entries()].map(
+  const originalEntries: [string, string[]][] = [...groups.entries()].map(
     ([key, set]) => [key, [...set.values()]],
   );
 
+  const entryGroups = new Map<string, string[]>();
+  for (const [key, values] of originalEntries) {
+    const groupKey = JSON.stringify(values);
+    const keys = entryGroups.get(groupKey) ?? [];
+    keys.push(key);
+    entryGroups.set(groupKey, keys);
+  }
+
+  const entries = [...entryGroups.entries()].map(([valuesJson, keys]) => [
+    keys,
+    JSON.parse(valuesJson),
+  ]);
+
   if (options.group) {
-    entries.sort(([, a], [, b]) => b.length - a.length);
+    entries.sort(
+      ([k1, v1], [k2, v2]) => k2.length * v2.length - k1.length * v1.length,
+    );
     /**
      * Reverses a key (e.g. "a.b.c" => "c.b.a").
      * @param key the key to reverse.
@@ -283,14 +298,15 @@ const printDiffs = (
     });
   }
 
-  let previousKey: string | null = null;
   for (const entry of entries) {
+    let previousKey: string | null = null;
     if (options.group) {
-      const [value, keys] = entry;
+      const [values, keys] = entry;
       if (keys.length == 1) {
         const key = keys.at(0) as string;
         const keyDiff = diffKeys(key, previousKey ?? key, options);
-        console.log(`${keyDiff}:\n  ${value}`);
+        console.log(`${keyDiff}:`);
+        values.forEach((value) => console.log(`  ${value}`));
         previousKey = key;
       } else {
         previousKey = null;
@@ -303,19 +319,27 @@ const printDiffs = (
           console.log(keyDiff);
           previousKey = key;
         }
-        console.log(`  ${value}`);
+        values.forEach((value) => console.log(`  ${value}`));
         previousKey = null;
       }
     } else {
-      const [key, values] = entry;
+      const [keys, values] = entry;
       if (values.length == 1) {
-        const keyDiff = diffKeys(key, previousKey ?? key, options);
-        console.log(`${keyDiff}:\n  ${values.at(0)}`);
-        previousKey = key;
+        for (const key of keys) {
+          const keyDiff = diffKeys(key, previousKey ?? key, options);
+          console.log(`${keyDiff}`);
+          previousKey = key;
+        }
+        values.forEach((value) => console.log(`  ${value}`));
       } else {
-        console.log(key);
+        for (const key of keys) {
+          const keyDiff = diffKeys(key, previousKey ?? key, options);
+          console.log(`${keyDiff}`);
+          previousKey = key;
+        }
         values.forEach((value) => console.log(`  ${value}`));
       }
+      previousKey = null;
     }
     console.log();
   }
