@@ -305,21 +305,21 @@ const printDiffs = (
       if (keys.length == 1) {
         const key = keys.at(0) as string;
         const keyDiff = diffKeys(key, previousKey ?? key, options);
-        console.log(`${keyDiff}:`);
-        values.forEach((value) => console.log(`  ${value}`));
+        values.forEach((value) => console.log(`${value}`));
+        console.log(`  ${keyDiff}`);
         previousKey = key;
       } else {
         previousKey = null;
+        values.forEach((value) => console.log(`${value}`));
         const maxKeyLength = Math.max(...keys.map((key) => key.length));
         for (const key of keys) {
           const keyDiff = diffKeys(key, previousKey ?? (keys.at(1) as string), {
             ...options,
             fill: maxKeyLength,
           });
-          console.log(keyDiff);
+          console.log(`  ${keyDiff}`);
           previousKey = key;
         }
-        values.forEach((value) => console.log(`  ${value}`));
         previousKey = null;
       }
     } else {
