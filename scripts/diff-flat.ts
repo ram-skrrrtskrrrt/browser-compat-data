@@ -53,7 +53,19 @@ const flattenObject = (
       if (typeof obj[key] === 'object' && obj[key] !== null) {
         // Recursively flatten nested objects
         flattenObject(
-          key === 'notes' && !Array.isArray(obj[key]) ? [obj[key]] : obj[key],
+          [
+            'chrome',
+            'chrome_android',
+            'edge',
+            'firefox',
+            'safari',
+            'safari_ios',
+            'webview_android',
+          ].includes(key)
+            ? toArray(obj[key]).reverse()
+            : key === 'notes'
+              ? toArray(obj[key])
+              : obj[key],
           fullKey,
           result,
         );
@@ -65,6 +77,14 @@ const flattenObject = (
   }
 
   return result;
+};
+
+const toArray = (value: any): any[] => {
+  if (!Array.isArray(value)) {
+    value = [value];
+  }
+
+  return value;
 };
 
 /**
