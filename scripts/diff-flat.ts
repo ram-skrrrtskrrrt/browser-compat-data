@@ -97,20 +97,49 @@ const toArray = (value: any): any[] => {
 };
 
 /**
+ * Formats a key diff'ed with the previous key.
+ * @param key the current key
+ * @param lastKey the previous key
+ * @param options Options
+ * @param options.html Whether to return HTML, otherwise plaintext
+ * @returns diffed key
+ */
+const diffKeys = (
+  lastKey: string,
+  key: string,
+  options: { html: boolean },
+): string =>
+  diffArrays(lastKey.split('.'), key.split('.'))
+    .filter((part) => !part.removed)
+    .map((part) => {
+      const key = part.value.join('.');
+
+      if (part.added) {
+        return options.html ? `<strong>${key}</strong>` : chalk`{blue ${key}}`;
+      }
+
+      return key;
+    })
+    .join('.');
+
+/**
  * Print diffs
  * @param base Base ref
  * @param head Head ref
  * @param options Options
- * @param options.html
+ * @param options.group Whether to group by value, rather than the common feature
+ * @param options.html Whether to output HTML, rather than plain-text
  */
 const printDiffs = (
   base: string,
   head = '',
-  options: { html: boolean },
+  options: { group: boolean; html: boolean },
 ): void => {
   if (options.html) {
     console.log('<div style="font-family: monospace">');
   }
+
+  const groups = new Map<string, Set<string>>();
 
   for (const status of getGitDiffStatuses(base, head)) {
     if (!status.headPath.endsWith('.json') || !status.headPath.includes('/')) {
@@ -119,9 +148,9 @@ const printDiffs = (
 
     // Note that A means Added for git while it means Array for deep-diff
     if (status.value === 'A') {
-      // TODO
+      console.warn("diff:flat doesn't support file additions yet!");
     } else if (status.value === 'D') {
-      // TODO
+      console.warn("diff:flat doesn't support file deletions yet!");
     } else {
       const contents = getBaseAndHeadContents(
         base,
@@ -147,7 +176,8 @@ const printDiffs = (
         keys.at(0)?.split('.') ?? [],
         keys.at(-1)?.split('.') ?? [],
       )[0]?.value.join('.');
-      console.log(options.html ? `<h3>${prefix}</h3>` : `${prefix}`);
+
+      const commonName = options.html ? `<h3>${prefix}</h3>` : `${prefix}`;
 
       let lastKey = keys.at(0) ?? '';
 
@@ -157,23 +187,11 @@ const printDiffs = (
         if (baseValue === headValue) {
           continue;
         }
-        const keyDiff = diffArrays(
-          lastKey.slice(prefix.length).split('.'),
-          key.slice(prefix.length).split('.'),
-        )
-          .filter((part) => !part.removed)
-          .map((part) => {
-            const key = part.value.join('.');
-
-            if (part.added) {
-              return options.html
-                ? `<strong>${key}</strong>`
-                : chalk`{bold ${key}}`;
-            }
-
-            return key;
-          })
-          .join('.');
+        const keyDiff = diffKeys(
+          lastKey.slice(prefix.length),
+          key.slice(prefix.length),
+          options,
+        );
 
         /**
          * Checks whether the value is a relevant value.
@@ -183,33 +201,91 @@ const printDiffs = (
         const hasValue = (value: any) =>
           typeof value === 'boolean' || (!!value && value !== 'mirror');
 
-        const value = [
+        const oldValue =
           hasValue(baseData[key] ?? null) &&
-            (options.html
-              ? `<del style="color: red">${baseValue}</del>`
-              : chalk`{red ${baseValue}}`),
-          hasValue(headData[key] ?? null) &&
+          (options.html
+            ? `<del style="color: red">${baseValue}</del>`
+            : chalk`{red ${baseValue}}`);
+        const newValue =
+          (hasValue(headData[key] ?? null) &&
             (options.html
               ? `<ins style="color: green">${headValue}</ins>`
-              : chalk`{green ${headValue}}`),
-        ]
-          .filter(Boolean)
-          .join(' → ');
+              : chalk`{green ${headValue}}`)) ||
+          '';
+
+        const value = [oldValue, newValue].filter(Boolean).join(' → ');
 
         if (!value.length) {
           // e.g. null => "mirror"
           continue;
         }
 
-        console.log(
-          options.html
+        if (options.group) {
+          const group = groups.get(value) ?? new Set();
+          group.add(key);
+          groups.set(value, group);
+        } else {
+          const change = options.html
             ? `${keyDiff} = ${value}<br />`
-            : chalk`${keyDiff} = ${value}`,
-        );
+            : chalk`${keyDiff} = ${value}`;
+          const group = groups.get(commonName) ?? new Set();
+          group.add(change);
+          groups.set(commonName, group);
+        }
         lastKey = key;
       }
+    }
+  }
 
-      console.log('');
+  const entries: [string, string[]][] = [...groups.entries()].map(
+    ([key, set]) => [key, [...set.values()]],
+  );
+
+  if (options.group) {
+    entries.sort(([, a], [, b]) => b.length - a.length);
+    /**
+     * Reverses a key (e.g. "a.b.c" => "c.b.a").
+     * @param key the key to reverse.
+     * @returns the reversed key.
+     */
+    const reverseKey = (key: string): string =>
+      key.split('.').reverse().join('.');
+    entries.forEach((entry) => {
+      entry[1] = entry[1].map(reverseKey).sort().map(reverseKey);
+    });
+  }
+
+  let previousKey: string | null = null;
+  for (const entry of entries) {
+    if (options.group) {
+      const [value, keys] = entry;
+      if (keys.length == 1) {
+        const key = keys.at(0) as string;
+        const keyDiff = diffKeys(key, previousKey ?? key, options);
+        console.log(`${keyDiff}: ${value}`);
+        previousKey = key;
+      } else {
+        previousKey = keys.at(0) as string;
+        for (const key of keys) {
+          const keyDiff = diffKeys(key, previousKey, options);
+          console.log(keyDiff);
+          previousKey = key;
+        }
+        console.log(`  ${value}`);
+        console.log();
+        previousKey = null;
+      }
+    } else {
+      const [key, values] = entry;
+      if (values.length == 1) {
+        const keyDiff = diffKeys(key, previousKey ?? key, options);
+        console.log(`${keyDiff}: ${values.at(0)}`);
+        previousKey = key;
+      } else {
+        console.log(key);
+        values.forEach((value) => console.log(`  ${value}`));
+        console.log();
+      }
     }
   }
 
@@ -239,10 +315,14 @@ if (esMain(import.meta)) {
         .option('html', {
           type: 'boolean',
           default: false,
+        })
+        .option('group', {
+          type: 'boolean',
+          default: false,
         });
     },
   );
 
-  const { base, head, html } = argv as any;
-  printDiffs(getMergeBase(base, head), head, { html });
+  const { base, head, html, group } = argv as any;
+  printDiffs(getMergeBase(base, head), head, { group, html });
 }
