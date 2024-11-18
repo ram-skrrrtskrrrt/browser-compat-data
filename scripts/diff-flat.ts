@@ -83,7 +83,9 @@ const flattenObject = (
 
       if (typeof obj[key] === 'object' && obj[key] !== null) {
         // Merge values.
-        if ('version_added' in obj[key]) {
+        if ('tags' in obj[key]) {
+          obj[key].tags = obj[key].tags.join(',');
+        } else if ('version_added' in obj[key]) {
           if ('flags' in obj[key]) {
             // Deduplicate flag.
             const flagsJson = JSON.stringify(obj[key].flags);
