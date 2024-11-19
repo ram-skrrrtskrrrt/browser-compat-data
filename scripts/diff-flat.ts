@@ -406,6 +406,34 @@ const printDiffs = (
     });
   }
 
+  /**
+   * Prints references found in the inputs.
+   * @param inputs the inputs to scan for references.
+   */
+  const printRefs = (...inputs: string[]): void => {
+    const lines: string[] = [];
+    for (const [index, content] of allFlags.entries()) {
+      const ref = formatFlagIndex(index);
+      if (inputs.some((input) => input.includes(ref))) {
+        lines.push(`${ref}: ${content}`);
+      }
+    }
+    for (const [index, content] of allNotes.entries()) {
+      const ref = formatNoteIndex(index);
+      if (inputs.some((input) => input.includes(ref))) {
+        lines.push(`${ref}: ${content}`);
+      }
+    }
+    if (lines.length > 0) {
+      console.log();
+      lines.forEach((line) =>
+        console.log(
+          options.html ? `<em>${line}</em>` : chalk`{italic ${line}}`,
+        ),
+      );
+    }
+  };
+
   for (const entry of entries) {
     let previousKey: string | null = null;
     if (options.group) {
@@ -415,6 +443,7 @@ const printDiffs = (
         const keyDiff = diffKeys(key, previousKey ?? key, options);
         values.forEach((value) => console.log(`${value}`));
         console.log(`  ${keyDiff}`);
+        printRefs(...values);
         previousKey = key;
       } else {
         previousKey = null;
@@ -436,6 +465,7 @@ const printDiffs = (
         if (options.html) {
           process.stdout.write('</details>');
         }
+        printRefs(...values);
         previousKey = null;
       }
     } else {
@@ -458,28 +488,6 @@ const printDiffs = (
       previousKey = null;
     }
     console.log('');
-  }
-
-  if (allFlags.some(Boolean)) {
-    console.log('Flags:');
-    for (const [index, flagsJson] of allFlags.entries()) {
-      if (!flagsJson) {
-        continue;
-      }
-      console.log(`${formatFlagIndex(index)}: ${flagsJson}`);
-    }
-    console.log();
-  }
-
-  if (allNotes.some(Boolean)) {
-    console.log('Notes:');
-    for (const [index, notesJson] of allNotes.entries()) {
-      if (!notesJson) {
-        continue;
-      }
-      console.log(`${formatNoteIndex(index)}: ${notesJson}`);
-    }
-    console.log();
   }
 
   if (options.html) {
