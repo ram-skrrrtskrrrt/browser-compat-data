@@ -4,6 +4,7 @@
 import chalk from 'chalk-template';
 import { diffArrays } from 'diff';
 import esMain from 'es-main';
+import stripAnsi from 'strip-ansi';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
@@ -170,6 +171,15 @@ const toArray = (value: any): any[] => {
 
   return value;
 };
+
+/**
+ * Compares two strings ignoring ANSI escape codes.
+ * @param a one value
+ * @param b other value
+ * @returns comparison result.
+ */
+const stripAnsiCompare = (a: string, b: string): number =>
+  stripAnsi(a).localeCompare(stripAnsi(b));
 
 /**
  * Formats a key diff'ed with the previous key.
@@ -375,7 +385,15 @@ const printDiffs = (
     entryGroups.set(groupKey, keys);
   }
 
-  const entries = [...entryGroups.entries()].map(([valuesJson, keys]) => [
+  const rawEntries = [...entryGroups.entries()];
+
+  if (options.group) {
+    rawEntries.sort(([, a], [, b]) =>
+      stripAnsiCompare(a.at(0) as string, b.at(0) as string),
+    );
+  }
+
+  const entries = rawEntries.map(([valuesJson, keys]) => [
     keys,
     JSON.parse(valuesJson),
   ]);
@@ -393,7 +411,6 @@ const printDiffs = (
   }
 
   if (options.group) {
-    entries.sort();
     /**
      * Reverses a key (e.g. "a.b.c" => "c.b.a").
      * @param key the key to reverse.
@@ -402,7 +419,10 @@ const printDiffs = (
     const reverseKey = (key: string): string =>
       key.split('.').reverse().join('.');
     entries.forEach((entry) => {
-      entry[1] = entry[1].map(reverseKey).sort().map(reverseKey);
+      entry[1] = entry[1]
+        .map(reverseKey)
+        .sort(stripAnsiCompare)
+        .map(reverseKey);
     });
   }
 
