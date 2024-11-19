@@ -295,12 +295,16 @@ const printDiffs = (
           typeof value === 'boolean' || (!!value && value !== 'mirror');
 
         const valueDiff = diffArrays(
-          (hasValue(headData[key] ?? null) ? headValue : '').split(' '),
-          (hasValue(baseData[key] ?? null) ? baseValue : '').split(' '),
+          (hasValue(headData[key] ?? null) ? headValue : '').split(
+            /(?<=[\] ])/,
+          ),
+          (hasValue(baseData[key] ?? null) ? baseValue : '').split(
+            /(?<=[\] ])/,
+          ),
         )
           .map((part) => {
             // Note: removed/added is deliberately inversed here, to have additions first.
-            const value = part.value.join(' ');
+            const value = part.value.join('');
             if (part.removed) {
               return options.html
                 ? `<ins style="color: green">${value}</ins>`
