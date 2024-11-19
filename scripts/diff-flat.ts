@@ -294,19 +294,28 @@ const printDiffs = (
         const hasValue = (value: any) =>
           typeof value === 'boolean' || (!!value && value !== 'mirror');
 
-        const oldValue =
-          hasValue(baseData[key] ?? null) &&
-          (options.html
-            ? `<del style="color: red">${baseValue}</del>`
-            : chalk`{red ${baseValue}}`);
-        const newValue =
-          (hasValue(headData[key] ?? null) &&
-            (options.html
-              ? `<ins style="color: green">${headValue}</ins>`
-              : chalk`{green ${headValue}}`)) ||
-          '';
+        const valueDiff = diffArrays(
+          (hasValue(headData[key] ?? null) ? headValue : '').split(' '),
+          (hasValue(baseData[key] ?? null) ? baseValue : '').split(' '),
+        )
+          .map((part) => {
+            // Note: removed/added is deliberately inversed here, to have additions first.
+            const value = part.value.join(' ');
+            if (part.removed) {
+              return options.html
+                ? `<ins style="color: green">${value}</ins>`
+                : chalk`{green ${value}}`;
+            } else if (part.added) {
+              return options.html
+                ? `<del style="color: red">${value}</del>`
+                : chalk`{red ${value}}`;
+            }
 
-        const value = [newValue, oldValue].filter(Boolean).join(' ← ');
+            return value;
+          })
+          .join('');
+
+        const value = valueDiff;
 
         if (!value.length) {
           // e.g. null => "mirror"
