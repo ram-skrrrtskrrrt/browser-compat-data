@@ -295,7 +295,7 @@ const printDiffs = (
 
       const commonName = options.html ? `<h3>${prefix}</h3>` : `${prefix}`;
 
-      let lastKey = keys.at(0) ?? '';
+      let lastKey = '';
 
       for (const key of keys) {
         const baseValue = JSON.stringify(baseData[key] ?? null);
@@ -303,9 +303,12 @@ const printDiffs = (
         if (baseValue === headValue) {
           continue;
         }
+        if (!lastKey) {
+          lastKey = key;
+        }
         const keyDiff = diffKeys(
-          lastKey.slice(prefix.length),
           key.slice(prefix.length),
+          lastKey.slice(prefix.length),
           options,
         );
 
