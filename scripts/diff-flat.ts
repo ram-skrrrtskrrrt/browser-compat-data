@@ -406,13 +406,6 @@ const printDiffs = (
     });
   }
 
-  /**
-   * Prints to stdout.
-   * @param line the line to print
-   * @returns nothing
-   */
-  const print = (line = ''): void => console.log(line);
-
   for (const entry of entries) {
     let previousKey: string | null = null;
     if (options.group) {
@@ -420,8 +413,8 @@ const printDiffs = (
       if (keys.length == 1) {
         const key = keys.at(0) as string;
         const keyDiff = diffKeys(key, previousKey ?? key, options);
-        values.forEach((value) => print(`${value}`));
-        print(`  ${keyDiff}`);
+        values.forEach((value) => console.log(`${value}`));
+        console.log(`  ${keyDiff}`);
         previousKey = key;
       } else {
         previousKey = null;
@@ -437,7 +430,7 @@ const printDiffs = (
             ...options,
             fill: maxKeyLength,
           });
-          print(`  ${keyDiff}`);
+          console.log(`  ${keyDiff}`);
           previousKey = key;
         }
         if (options.html) {
@@ -450,43 +443,43 @@ const printDiffs = (
       if (values.length == 1) {
         for (const key of keys) {
           const keyDiff = diffKeys(key, previousKey ?? key, options);
-          print(`${keyDiff}`);
+          console.log(`${keyDiff}`);
           previousKey = key;
         }
-        values.forEach((value) => print(`  ${value}`));
+        values.forEach((value) => console.log(`  ${value}`));
       } else {
         for (const key of keys) {
           const keyDiff = diffKeys(key, previousKey ?? key, options);
-          print(`${keyDiff}`);
+          console.log(`${keyDiff}`);
           previousKey = key;
         }
-        values.forEach((value) => print(`  ${value}`));
+        values.forEach((value) => console.log(`  ${value}`));
       }
       previousKey = null;
     }
-    print('');
+    console.log('');
   }
 
   if (allFlags.some(Boolean)) {
-    print('Flags:');
+    console.log('Flags:');
     for (const [index, flagsJson] of allFlags.entries()) {
       if (!flagsJson) {
         continue;
       }
-      print(`${formatFlagIndex(index)}: ${flagsJson}`);
+      console.log(`${formatFlagIndex(index)}: ${flagsJson}`);
     }
-    print();
+    console.log();
   }
 
   if (allNotes.some(Boolean)) {
-    print('Notes:');
+    console.log('Notes:');
     for (const [index, notesJson] of allNotes.entries()) {
       if (!notesJson) {
         continue;
       }
-      print(`${formatNoteIndex(index)}: ${notesJson}`);
+      console.log(`${formatNoteIndex(index)}: ${notesJson}`);
     }
-    print();
+    console.log();
   }
 
   if (options.html) {
