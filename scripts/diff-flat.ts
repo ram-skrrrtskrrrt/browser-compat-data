@@ -420,22 +420,6 @@ const printDiffs = (
     }
   }
 
-  if (options.group) {
-    /**
-     * Reverses a key (e.g. "a.b.c" => "c.b.a").
-     * @param key the key to reverse.
-     * @returns the reversed key.
-     */
-    const reverseKey = (key: string): string =>
-      key.split('.').reverse().join('.');
-    entries.forEach((entry) => {
-      entry[1] = entry[1]
-        .map(reverseKey)
-        .sort(stripAnsiCompare)
-        .map(reverseKey);
-    });
-  }
-
   /**
    * Prints references found in the inputs.
    * @param inputs the inputs to scan for references.
