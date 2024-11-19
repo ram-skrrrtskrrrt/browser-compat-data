@@ -317,13 +317,10 @@ const printDiffs = (
         const hasValue = (value: any) =>
           typeof value === 'boolean' || (!!value && value !== 'mirror');
 
+        const splitRegexp = /(?<=^")|(?<=[\],/ ])|(?=[[,/ ])|(?="$)/;
         const valueDiff = diffArrays(
-          (hasValue(headData[key] ?? null) ? headValue : '').split(
-            /(?<=[\] ])/,
-          ),
-          (hasValue(baseData[key] ?? null) ? baseValue : '').split(
-            /(?<=[\] ])/,
-          ),
+          (hasValue(headData[key] ?? null) ? headValue : '').split(splitRegexp),
+          (hasValue(baseData[key] ?? null) ? baseValue : '').split(splitRegexp),
         )
           .map((part) => {
             // Note: removed/added is deliberately inversed here, to have additions first.
