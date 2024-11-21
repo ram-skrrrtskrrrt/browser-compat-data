@@ -8,13 +8,15 @@ import stripAnsi from 'strip-ansi';
 import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
-import { SimpleSupportStatement } from '../types/types.js';
+import { CompatData, SimpleSupportStatement } from '../types/types.js';
+import { walk } from '../utils/index.js';
 
+import { applyMirroring } from './build/index.js';
 import { getMergeBase, getFileContent, getGitDiffStatuses } from './lib/git.js';
 
-interface Contents {
-  base: string;
-  head: string;
+interface Contents<T = any> {
+  base: T;
+  head: T;
 }
 
 /**
@@ -26,12 +28,12 @@ interface Contents {
  * @param headPath Head path
  * @returns The contents of both commits
  */
-const getBaseAndHeadContents = (
+const getBaseAndHeadContents = <T>(
   baseCommit: string,
   basePath: string,
   headCommit: string,
   headPath: string,
-): Contents => {
+): Contents<T> => {
   const base = JSON.parse(getFileContent(baseCommit, basePath));
   const head = JSON.parse(getFileContent(headCommit, headPath));
   return { base, head };
@@ -245,11 +247,12 @@ const diffKeys = (
  * @param options Options
  * @param options.group Whether to group by value, rather than the common feature
  * @param options.html Whether to output HTML, rather than plain-text
+ * @param options.mirror Whether to apply mirroring, rather than ignore "mirror" values
  */
 const printDiffs = (
   base: string,
   head = '',
-  options: { group: boolean; html: boolean },
+  options: { group: boolean; html: boolean; mirror: boolean },
 ): void => {
   if (options.html) {
     console.log('<pre style="font-family: monospace">');
@@ -268,12 +271,21 @@ const printDiffs = (
     } else if (status.value === 'D') {
       console.warn("diff:flat doesn't support file deletions yet!");
     } else {
-      const contents = getBaseAndHeadContents(
+      const contents = getBaseAndHeadContents<CompatData>(
         base,
         status.basePath,
         head,
         status.headPath,
       );
+      if (options.mirror) {
+        for (const feature of walk(undefined, contents.base)) {
+          applyMirroring(feature);
+        }
+        for (const feature of walk(undefined, contents.head)) {
+          applyMirroring(feature);
+        }
+      }
+
       const baseData = flattenObject(contents.base);
       const headData = flattenObject(contents.head);
 
@@ -537,10 +549,14 @@ if (esMain(import.meta)) {
         .option('group', {
           type: 'boolean',
           default: false,
+        })
+        .option('mirror', {
+          type: 'boolean',
+          default: false,
         });
     },
   );
 
-  const { base, head, html, group } = argv as any;
-  printDiffs(getMergeBase(base, head), head, { group, html });
+  const { base, head, group, html, mirror } = argv as any;
+  printDiffs(getMergeBase(base, head), head, { group, html, mirror });
 }
