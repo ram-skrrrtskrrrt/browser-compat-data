@@ -139,7 +139,8 @@ const flattenObject = (
           } = obj[key] as SimpleSupportStatement;
 
           const parts = [
-            version_added && version_added && `${version_added}+`,
+            typeof version_added === 'string' && `${version_added}+`,
+            typeof version_added === 'boolean' && `${version_added}`,
             version_removed && `−${version_removed}`,
             partial_implementation && '(partial)',
             flags,
