@@ -9,7 +9,7 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
 import { CompatData, SimpleSupportStatement } from '../types/types.js';
-import { exec, walk } from '../utils/index.js';
+import { exec, execAsync, walk } from '../utils/index.js';
 
 import { applyMirroring } from './build/index.js';
 import { getMergeBase, getFileContent, getGitDiffStatuses } from './lib/git.js';
@@ -572,12 +572,23 @@ if (esMain(import.meta)) {
     [options.base, options.head] = [options.head, 'origin/main'];
   }
 
-  const { base, head, group, html, mirror } = options;
+  const fetchAndResolve = (ref: string) => {
+    if (ref.startsWith('origin/')) {
+      const remoteRef = ref.slice('origin/'.length);
+      exec(`git fetch origin ${remoteRef}`);
+      return exec(`git rev-parse ${ref}`);
+    } else if (ref.startsWith('pull/')) {
+      exec(`git fetch origin ${ref}`);
+      return exec('git rev-parse FETCH_HEAD');
+    }
 
-  exec(`
-    git fetch origin ${base} 2>/dev/null || true &
-    git fetch origin ${head} 2>/dev/null || true
-  `);
+    return exec(`git rev-parse ${ref}`);
+  };
+
+  options.base = fetchAndResolve(options.base);
+  options.head = fetchAndResolve(options.head);
+
+  const { base, head, group, html, mirror } = options;
 
   printDiffs(getMergeBase(base, head), head, { group, html, mirror });
 }
