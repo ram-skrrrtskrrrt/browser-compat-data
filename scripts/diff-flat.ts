@@ -13,6 +13,7 @@ import { walk } from '../utils/index.js';
 
 import { applyMirroring } from './build/index.js';
 import { getMergeBase, getFileContent, getGitDiffStatuses } from './lib/git.js';
+import { exec } from './release/utils.js';
 
 interface Contents<T = any> {
   base: T;
@@ -557,6 +558,17 @@ if (esMain(import.meta)) {
     },
   );
 
-  const { base, head, group, html, mirror } = argv as any;
+  const options = argv as any;
+
+  if (
+    options.head === 'HEAD' &&
+    exec('git branch --show-current') === 'flat-diff'
+  ) {
+    // Compare first positional parameter against origin/main.
+    [options.base, options.head] = [options.head, options.base];
+  }
+
+  const { base, head, group, html, mirror } = options;
+
   printDiffs(getMergeBase(base, head), head, { group, html, mirror });
 }
