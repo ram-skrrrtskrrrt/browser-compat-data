@@ -560,6 +560,11 @@ if (esMain(import.meta)) {
 
   const options = argv as any;
 
+  if (/^\d+$/.test(options.base)) {
+    options.head = `pull/${options.base}/head`;
+    options.base = 'origin/main';
+  }
+
   if (
     options.head === 'HEAD' &&
     exec('git branch --show-current') === 'flat-diff'
