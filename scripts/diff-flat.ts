@@ -189,15 +189,6 @@ const toArray = (value: any): any[] => {
 };
 
 /**
- * Compares two strings ignoring ANSI escape codes.
- * @param a one value
- * @param b other value
- * @returns comparison result.
- */
-const stripAnsiCompare = (a: string, b: string): number =>
-  stripAnsi(a).localeCompare(stripAnsi(b));
-
-/**
  * Formats a key diff'ed with the previous key.
  * @param key the current key
  * @param lastKey the previous key
@@ -426,8 +417,16 @@ const printDiffs = (
   const rawEntries = [...entryGroups.entries()];
 
   if (options.group) {
+    // Natural sort.
+    const collator = new Intl.Collator(undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    });
     rawEntries.sort(([, a], [, b]) =>
-      stripAnsiCompare(a.at(0) as string, b.at(0) as string),
+      collator.compare(
+        stripAnsi(a.at(0) as string),
+        stripAnsi(b.at(0) as string),
+      ),
     );
   }
 
