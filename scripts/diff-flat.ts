@@ -580,6 +580,10 @@ if (esMain(import.meta)) {
     } else if (ref.startsWith('pull/')) {
       exec(`git fetch origin ${ref}`);
       return exec('git rev-parse FETCH_HEAD');
+    } else if (ref.includes(':')) {
+      const remoteRef = `gh pr view ${ref} --json headRefOid -q '.headRefOid'`;
+      exec(`git fetch origin ${remoteRef}`);
+      return remoteRef;
     }
 
     return exec(`git rev-parse ${ref}`);
