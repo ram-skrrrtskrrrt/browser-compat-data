@@ -265,136 +265,134 @@ const printDiffs = (
       continue;
     }
 
-    // Note that A means Added for git while it means Array for deep-diff
-    if (status.value === 'A') {
-      console.warn("diff:flat doesn't support file additions yet!");
-    } else if (status.value === 'D') {
-      console.warn("diff:flat doesn't support file deletions yet!");
-    } else {
-      const contents = getBaseAndHeadContents<CompatData>(
-        base,
-        status.basePath,
-        head,
-        status.headPath,
-      );
-      if (options.mirror) {
-        for (const feature of walk(undefined, contents.base)) {
-          applyMirroring(feature);
-        }
-        for (const feature of walk(undefined, contents.head)) {
-          applyMirroring(feature);
-        }
+    const baseContents = (
+      status.value !== 'A'
+        ? JSON.parse(getFileContent(base, status.basePath))
+        : {}
+    ) as CompatData;
+    const headContents = (
+      status.value !== 'D'
+        ? JSON.parse(getFileContent(head, status.headPath))
+        : {}
+    ) as CompatData;
+
+    if (options.mirror) {
+      for (const feature of walk(undefined, baseContents)) {
+        applyMirroring(feature);
       }
+      for (const feature of walk(undefined, headContents)) {
+        applyMirroring(feature);
+      }
+    }
 
-      const baseData = flattenObject(contents.base);
-      const headData = flattenObject(contents.head);
+    const baseData = flattenObject(baseContents);
+    const headData = flattenObject(headContents);
 
-      const keys = [
-        ...new Set<string>([
-          ...Object.keys(baseData),
-          ...Object.keys(headData),
-        ]).values(),
-      ].sort();
+    const keys = [
+      ...new Set<string>([
+        ...Object.keys(baseData),
+        ...Object.keys(headData),
+      ]).values(),
+    ].sort();
 
-      if (!keys.length) {
+    if (!keys.length) {
+      continue;
+    }
+
+    const prefix = diffArrays(
+      keys.at(0)?.split('.') ?? [],
+      keys.at(-1)?.split('.') ?? [],
+    )[0]?.value.join('.');
+
+    const commonName = options.html ? `<h3>${prefix}</h3>` : `${prefix}`;
+
+    let lastKey = '';
+
+    for (const key of keys) {
+      const baseValue = JSON.stringify(baseData[key] ?? null);
+      const headValue = JSON.stringify(headData[key] ?? null);
+      if (baseValue === headValue) {
+        continue;
+      }
+      if (!lastKey) {
+        lastKey = key;
+      }
+      const keyDiff = diffKeys(
+        key.slice(prefix.length),
+        lastKey.slice(prefix.length),
+        options,
+      );
+
+      /**
+       * Checks whether the value is a relevant value.
+       * @param value the value.
+       * @returns TRUE if the value is relevant, FALSE otherwise.
+       */
+      const hasValue = (value: any) =>
+        typeof value === 'boolean' || (!!value && value !== 'mirror');
+
+      const splitRegexp = /(?<=^")|(?<=[\],/ ])|(?=[[,/ ])|(?="$)/;
+      const valueDiff = diffArrays(
+        (hasValue(headData[key] ?? null) ? headValue : '').split(splitRegexp),
+        (hasValue(baseData[key] ?? null) ? baseValue : '').split(splitRegexp),
+      )
+        .map((part) => {
+          // Note: removed/added is deliberately inversed here, to have additions first.
+          const value = part.value.join('');
+          if (part.removed) {
+            return options.html
+              ? `<ins style="color: green">${value}</ins>`
+              : chalk`{green ${value}}`;
+          } else if (part.added) {
+            return options.html
+              ? `<del style="color: red">${value}</del>`
+              : chalk`{red ${value}}`;
+          }
+
+          return value;
+        })
+        .join('');
+
+      const value = valueDiff;
+
+      if (!value.length) {
+        // e.g. null => "mirror"
         continue;
       }
 
-      const prefix = diffArrays(
-        keys.at(0)?.split('.') ?? [],
-        keys.at(-1)?.split('.') ?? [],
-      )[0]?.value.join('.');
-
-      const commonName = options.html ? `<h3>${prefix}</h3>` : `${prefix}`;
-
-      let lastKey = '';
-
-      for (const key of keys) {
-        const baseValue = JSON.stringify(baseData[key] ?? null);
-        const headValue = JSON.stringify(headData[key] ?? null);
-        if (baseValue === headValue) {
-          continue;
-        }
-        if (!lastKey) {
-          lastKey = key;
-        }
-        const keyDiff = diffKeys(
-          key.slice(prefix.length),
-          lastKey.slice(prefix.length),
-          options,
+      if (options.group) {
+        const reverseKeyParts = key.split('.').reverse();
+        const browser = reverseKeyParts.find((part) =>
+          BROWSER_NAMES.includes(part),
         );
-
-        /**
-         * Checks whether the value is a relevant value.
-         * @param value the value.
-         * @returns TRUE if the value is relevant, FALSE otherwise.
-         */
-        const hasValue = (value: any) =>
-          typeof value === 'boolean' || (!!value && value !== 'mirror');
-
-        const splitRegexp = /(?<=^")|(?<=[\],/ ])|(?=[[,/ ])|(?="$)/;
-        const valueDiff = diffArrays(
-          (hasValue(headData[key] ?? null) ? headValue : '').split(splitRegexp),
-          (hasValue(baseData[key] ?? null) ? baseValue : '').split(splitRegexp),
-        )
-          .map((part) => {
-            // Note: removed/added is deliberately inversed here, to have additions first.
-            const value = part.value.join('');
-            if (part.removed) {
-              return options.html
-                ? `<ins style="color: green">${value}</ins>`
-                : chalk`{green ${value}}`;
-            } else if (part.added) {
-              return options.html
-                ? `<del style="color: red">${value}</del>`
-                : chalk`{red ${value}}`;
-            }
-
-            return value;
-          })
-          .join('');
-
-        const value = valueDiff;
-
-        if (!value.length) {
-          // e.g. null => "mirror"
-          continue;
-        }
-
-        if (options.group) {
-          const reverseKeyParts = key.split('.').reverse();
-          const browser = reverseKeyParts.find((part) =>
-            BROWSER_NAMES.includes(part),
-          );
-          const field = reverseKeyParts.find((part) => !/^\d+$/.test(part));
-          const groupKey = `${!browser ? '' : options.html ? `<strong>${browser}</strong>.` : chalk`{cyan ${browser}}.`}${field} = ${value}`;
-          const groupValue = key
-            .split('.')
-            .map((part) => (part !== browser && part !== field ? part : '{}'))
-            .reverse()
-            .filter((value, index) => index > 0 || value !== '{}')
-            .reverse()
-            .map((value) =>
-              value !== '{}'
-                ? value
-                : options.html
-                  ? '<small>{}</small>'
-                  : chalk`{dim \{\}}`,
-            )
-            .join('.');
-          const group = groups.get(groupKey) ?? new Set();
-          group.add(groupValue);
-          groups.set(groupKey, group);
-        } else {
-          const change = options.html
-            ? `${keyDiff} = ${value}`
-            : chalk`${keyDiff} = ${value}`;
-          const group = groups.get(commonName) ?? new Set();
-          group.add(change);
-          groups.set(commonName, group);
-        }
-        lastKey = key;
+        const field = reverseKeyParts.find((part) => !/^\d+$/.test(part));
+        const groupKey = `${!browser ? '' : options.html ? `<strong>${browser}</strong>.` : chalk`{cyan ${browser}}.`}${field} = ${value}`;
+        const groupValue = key
+          .split('.')
+          .map((part) => (part !== browser && part !== field ? part : '{}'))
+          .reverse()
+          .filter((value, index) => index > 0 || value !== '{}')
+          .reverse()
+          .map((value) =>
+            value !== '{}'
+              ? value
+              : options.html
+                ? '<small>{}</small>'
+                : chalk`{dim \{\}}`,
+          )
+          .join('.');
+        const group = groups.get(groupKey) ?? new Set();
+        group.add(groupValue);
+        groups.set(groupKey, group);
+      } else {
+        const change = options.html
+          ? `${keyDiff} = ${value}`
+          : chalk`${keyDiff} = ${value}`;
+        const group = groups.get(commonName) ?? new Set();
+        group.add(change);
+        groups.set(commonName, group);
       }
+      lastKey = key;
     }
   }
 
