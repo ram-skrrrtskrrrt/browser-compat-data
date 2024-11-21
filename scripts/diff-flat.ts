@@ -575,7 +575,8 @@ if (esMain(import.meta)) {
   const remote = exec(
     'git remote -v | grep "mdn/browser-compat-data" | awk \'{print $1}\' | uniq',
   );
-  const gitFetch = (ref: string) => exec(`git fetch ${remote} ${ref}`);
+  const gitFetch = (ref: string) =>
+    exec(`git fetch ${remote} ${ref} 2>/dev/null`);
   const gitRevParse = (ref: string) => exec(`git rev-parse ${ref}`);
 
   const fetchAndResolve = (ref: string) => {
