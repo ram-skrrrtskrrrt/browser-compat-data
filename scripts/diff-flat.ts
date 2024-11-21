@@ -506,6 +506,7 @@ const printDiffs = (
           previousKey = key;
         }
         values.forEach((value) => console.log(`  ${value}`));
+        printRefs(...values);
       } else {
         for (const key of keys) {
           const keyDiff = diffKeys(key, previousKey ?? key, options);
@@ -513,6 +514,7 @@ const printDiffs = (
           previousKey = key;
         }
         values.forEach((value) => console.log(`  ${value}`));
+        printRefs(...values);
       }
       previousKey = null;
     }
