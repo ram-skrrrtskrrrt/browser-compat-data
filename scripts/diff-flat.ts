@@ -564,8 +564,8 @@ if (esMain(import.meta)) {
     options.head === 'HEAD' &&
     exec('git branch --show-current') === 'flat-diff'
   ) {
-    // Compare first positional parameter against origin/main.
-    [options.base, options.head] = [options.head, options.base];
+    // Workaround: Compare first positional parameter against origin/main.
+    [options.base, options.head] = [options.head, 'origin/main'];
   }
 
   const { base, head, group, html, mirror } = options;
