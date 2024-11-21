@@ -572,12 +572,19 @@ if (esMain(import.meta)) {
     [options.base, options.head] = [options.head, 'origin/main'];
   }
 
-  const gitFetch = (ref: string) => exec(`git fetch origin ${ref}`);
+  const remote = exec(
+    'git remote -v | grep "mdn/browser-compat-data" | awk \'{print $1}\' | uniq',
+  );
+  const gitFetch = (ref: string) => exec(`git fetch ${remote} ${ref}`);
   const gitRevParse = (ref: string) => exec(`git rev-parse ${ref}`);
 
   const fetchAndResolve = (ref: string) => {
     if (ref.startsWith('origin/')) {
       const remoteRef = ref.slice('origin/'.length);
+      gitFetch(remoteRef);
+      return gitRevParse(ref);
+    } else if (ref.startsWith(`${remote}/`)) {
+      const remoteRef = ref.slice(`${remote}/`.length);
       gitFetch(remoteRef);
       return gitRevParse(ref);
     } else if (ref.startsWith('pull/')) {
