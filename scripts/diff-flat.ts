@@ -576,8 +576,8 @@ if (esMain(import.meta)) {
   const { base, head, group, html, mirror } = options;
 
   exec(`
-    git rev-parse ${base} || git fetch origin ${base} 2>/dev/null || true &
-    git rev-parse ${head} || git fetch origin ${head} 2>/dev/null || true
+    git fetch origin ${base} 2>/dev/null || true &
+    git fetch origin ${head} 2>/dev/null || true
   `);
 
   printDiffs(getMergeBase(base, head), head, { group, html, mirror });
