@@ -208,11 +208,10 @@ const stripAnsiCompare = (a: string, b: string): number =>
 const diffKeys = (
   key: string,
   lastKey: string,
-  options: { fill?: number; html: boolean; raw?: boolean; separator?: string },
+  options: { fill?: number; html: boolean },
 ): string => {
-  const len = stripAnsi(key).length;
+  const len = key.length;
   let fill = options.fill ?? 0;
-  const separator = options.separator ?? '.';
   /**
    * Filters out irrelevant keys.
    * @param part the key part.
@@ -220,28 +219,25 @@ const diffKeys = (
    */
   const keyFilter = (part) => part !== '__compat' && part !== 'support';
   return diffArrays(
-    lastKey.split(separator).filter(keyFilter),
-    key.split(separator).filter(keyFilter),
+    lastKey.split('.').filter(keyFilter),
+    key.split('.').filter(keyFilter),
   )
     .filter((part) => !part.removed)
     .map((part) => {
-      const key = part.value.join(separator);
+      const key = part.value.join('.');
 
       if (part.added) {
         const space = fill && len < fill ? ' '.repeat(fill - len) : '';
         fill = 0;
         return (
-          (options.raw
-            ? key
-            : options.html
-              ? `<strong>${key}</strong>`
-              : chalk`{blue ${key}}`) + space
+          (options.html ? `<strong>${key}</strong>` : chalk`{blue ${key}}`) +
+          space
         );
       }
 
       return key;
     })
-    .join(separator);
+    .join('.');
 };
 
 /**
@@ -504,65 +500,19 @@ const printDiffs = (
     } else {
       const [keys, values] = entry;
       if (values.length == 1) {
-        const maxKeyLength = Math.max(...keys.map((key) => key.length));
         for (const key of keys) {
-          const keyDiff = diffKeys(key, previousKey ?? key, {
-            ...options,
-            fill: maxKeyLength,
-          });
+          const keyDiff = diffKeys(key, previousKey ?? key, options);
           console.log(`${keyDiff}`);
           previousKey = key;
         }
-
-        const maxValueLength = Math.max(
-          ...values.map((value) => stripAnsi(value).length),
-        );
-        let previousValue = null;
-        for (const value of values) {
-          const valueDiff = diffKeys(
-            value,
-            previousValue ?? values.at(values.indexOf(value) + 1) ?? value,
-            {
-              ...options,
-              html: false,
-              raw: true,
-              fill: maxValueLength,
-              separator: '=',
-            },
-          );
-          console.log(`  ${valueDiff}`);
-          previousValue = value;
-        }
+        values.forEach((value) => console.log(`  ${value}`));
       } else {
-        const maxKeyLength = Math.max(...keys.map((key) => key.length));
         for (const key of keys) {
-          const keyDiff = diffKeys(key, previousKey ?? key, {
-            ...options,
-            fill: maxKeyLength,
-          });
+          const keyDiff = diffKeys(key, previousKey ?? key, options);
           console.log(`${keyDiff}`);
           previousKey = key;
         }
-
-        const maxValueLength = Math.max(
-          ...values.map((value) => stripAnsi(value).length),
-        );
-        let previousValue = null;
-        for (const value of values) {
-          const valueDiff = diffKeys(
-            value,
-            previousValue ?? values.at(values.indexOf(value) + 1) ?? value,
-            {
-              ...options,
-              html: false,
-              raw: true,
-              fill: maxValueLength,
-              separator: '=',
-            },
-          );
-          console.log(`  ${valueDiff}`);
-          previousValue = value;
-        }
+        values.forEach((value) => console.log(`  ${value}`));
       }
       previousKey = null;
     }
