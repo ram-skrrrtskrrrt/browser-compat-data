@@ -9,11 +9,10 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
 import { CompatData, SimpleSupportStatement } from '../types/types.js';
-import { walk } from '../utils/index.js';
+import { exec, walk } from '../utils/index.js';
 
 import { applyMirroring } from './build/index.js';
 import { getMergeBase, getFileContent, getGitDiffStatuses } from './lib/git.js';
-import { exec } from './release/utils.js';
 
 interface Contents<T = any> {
   base: T;
