@@ -9,7 +9,7 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 
 import { CompatData, SimpleSupportStatement } from '../types/types.js';
-import { exec, execAsync, walk } from '../utils/index.js';
+import { exec, walk } from '../utils/index.js';
 
 import { applyMirroring } from './build/index.js';
 import { getMergeBase, getFileContent, getGitDiffStatuses } from './lib/git.js';
@@ -572,21 +572,24 @@ if (esMain(import.meta)) {
     [options.base, options.head] = [options.head, 'origin/main'];
   }
 
+  const gitFetch = (ref: string) => exec(`git fetch origin ${ref}`);
+  const gitRevParse = (ref: string) => exec(`git rev-parse ${ref}`);
+
   const fetchAndResolve = (ref: string) => {
     if (ref.startsWith('origin/')) {
       const remoteRef = ref.slice('origin/'.length);
-      exec(`git fetch origin ${remoteRef}`);
-      return exec(`git rev-parse ${ref}`);
+      gitFetch(remoteRef);
+      return gitRevParse(ref);
     } else if (ref.startsWith('pull/')) {
-      exec(`git fetch origin ${ref}`);
-      return exec('git rev-parse FETCH_HEAD');
+      gitFetch(ref);
+      return gitRevParse('FETCH_HEAD');
     } else if (ref.includes(':')) {
       const remoteRef = `gh pr view ${ref} --json headRefOid -q '.headRefOid'`;
-      exec(`git fetch origin ${remoteRef}`);
+      gitFetch(remoteRef);
       return remoteRef;
     }
 
-    return exec(`git rev-parse ${ref}`);
+    return gitRevParse(ref);
   };
 
   options.base = fetchAndResolve(options.base);
