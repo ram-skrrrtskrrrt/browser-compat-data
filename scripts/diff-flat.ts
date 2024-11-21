@@ -11,7 +11,7 @@ import { hideBin } from 'yargs/helpers';
 import { CompatData, SimpleSupportStatement } from '../types/types.js';
 import { exec, walk } from '../utils/index.js';
 
-import { applyMirroring } from './build/index.js';
+import { applyMirroring, transformMD } from './build/index.js';
 import { getMergeBase, getFileContent, getGitDiffStatuses } from './lib/git.js';
 
 interface Contents<T = any> {
@@ -248,11 +248,17 @@ const diffKeys = (
  * @param options.group Whether to group by value, rather than the common feature
  * @param options.html Whether to output HTML, rather than plain-text
  * @param options.mirror Whether to apply mirroring, rather than ignore "mirror" values
+ * @param options.transform Whether to apply transforms
  */
 const printDiffs = (
   base: string,
   head = '',
-  options: { group: boolean; html: boolean; mirror: boolean },
+  options: {
+    group: boolean;
+    html: boolean;
+    mirror: boolean;
+    transform: boolean;
+  },
 ): void => {
   if (options.html) {
     console.log('<pre style="font-family: monospace">');
@@ -282,6 +288,14 @@ const printDiffs = (
       }
       for (const feature of walk(undefined, headContents)) {
         applyMirroring(feature);
+      }
+    }
+    if (options.transform) {
+      for (const feature of walk(undefined, baseContents)) {
+        transformMD(feature);
+      }
+      for (const feature of walk(undefined, headContents)) {
+        transformMD(feature);
       }
     }
 
@@ -553,6 +567,10 @@ if (esMain(import.meta)) {
         .option('mirror', {
           type: 'boolean',
           default: false,
+        })
+        .option('transform', {
+          type: 'boolean',
+          default: false,
         });
     },
   );
@@ -603,7 +621,12 @@ if (esMain(import.meta)) {
   options.base = fetchAndResolve(options.base);
   options.head = fetchAndResolve(options.head);
 
-  const { base, head, group, html, mirror } = options;
+  const { base, head, group, html, mirror, transform } = options;
 
-  printDiffs(getMergeBase(base, head), head, { group, html, mirror });
+  printDiffs(getMergeBase(base, head), head, {
+    group,
+    html,
+    mirror,
+    transform,
+  });
 }
