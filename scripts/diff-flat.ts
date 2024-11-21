@@ -84,6 +84,16 @@ const flattenObject = (
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
       const fullKey = parentKey ? `${parentKey}.${key}` : key;
 
+      if (
+        key !== 'version' &&
+        typeof obj[key] === 'string' &&
+        obj[key] === 'mirror'
+      ) {
+        obj[key] = {
+          version: 'mirror',
+        };
+      }
+
       if (typeof obj[key] === 'object' && obj[key] !== null) {
         // Merge values.
         if ('status' in obj[key]) {
@@ -329,18 +339,23 @@ const printDiffs = (
         options,
       );
 
-      /**
-       * Checks whether the value is a relevant value.
-       * @param value the value.
-       * @returns TRUE if the value is relevant, FALSE otherwise.
-       */
-      const hasValue = (value: any) =>
-        typeof value === 'boolean' || (!!value && value !== 'mirror');
-
       const splitRegexp = /(?<=^")|(?<=[\],/ ])|(?=[[,/ ])|(?="$)/;
+      let headValueForDiff = headValue;
+      let baseValueForDiff = baseValue;
+
+      if (baseValue == 'null') {
+        baseValueForDiff = '';
+        if (headValue == '"mirror"' || headValue == '"false"') {
+          // Ignore initial "mirror"/"false" values.
+          headValueForDiff = '';
+        }
+      } else if (headValue == 'null') {
+        headValueForDiff = '';
+      }
+
       const valueDiff = diffArrays(
-        (hasValue(headData[key] ?? null) ? headValue : '').split(splitRegexp),
-        (hasValue(baseData[key] ?? null) ? baseValue : '').split(splitRegexp),
+        headValueForDiff.split(splitRegexp),
+        baseValueForDiff.split(splitRegexp),
       )
         .map((part) => {
           // Note: removed/added is deliberately inversed here, to have additions first.
