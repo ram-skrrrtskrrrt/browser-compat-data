@@ -11,7 +11,7 @@ import { hideBin } from 'yargs/helpers';
 import { CompatData, SimpleSupportStatement } from '../types/types.js';
 import { exec, walk } from '../utils/index.js';
 
-import { applyMirroring, transformMD } from './build/index.js';
+import { addVersionLast, applyMirroring, transformMD } from './build/index.js';
 import { getMergeBase, getFileContent, getGitDiffStatuses } from './lib/git.js';
 
 interface Contents<T = any> {
@@ -140,7 +140,7 @@ const flattenObject = (
 
           const {
             version_added,
-            version_removed,
+            version_last,
             partial_implementation,
             alternative_name,
             prefix,
@@ -150,8 +150,8 @@ const flattenObject = (
 
           const parts = [
             typeof version_added === 'string'
-              ? typeof version_removed === 'string'
-                ? `${version_added}−${version_removed}`
+              ? typeof version_last === 'string'
+                ? `${version_added}−${version_last}`
                 : `${version_added}+`
               : `${version_added}`,
             partial_implementation && '(partial)',
@@ -163,6 +163,7 @@ const flattenObject = (
 
           obj[key].version = parts.join(' ');
           delete obj[key].version_added;
+          delete obj[key].version_last;
           delete obj[key].version_removed;
           delete obj[key].partial_implementation;
           delete obj[key].alternative_name;
@@ -293,6 +294,12 @@ const printDiffs = (
       for (const feature of walk(undefined, headContents)) {
         applyMirroring(feature);
       }
+    }
+    for (const feature of walk(undefined, baseContents)) {
+      addVersionLast(feature);
+    }
+    for (const feature of walk(undefined, headContents)) {
+      addVersionLast(feature);
     }
     if (options.transform) {
       for (const feature of walk(undefined, baseContents)) {
