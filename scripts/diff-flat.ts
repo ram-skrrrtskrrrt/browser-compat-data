@@ -586,7 +586,7 @@ if (esMain(import.meta)) {
         })
         .option('group', {
           type: 'boolean',
-          default: false,
+          default: true,
         })
         .option('mirror', {
           type: 'boolean',
