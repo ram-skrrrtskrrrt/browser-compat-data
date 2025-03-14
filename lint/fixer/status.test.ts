@@ -140,9 +140,9 @@ const tests: { name: string; input: TestValue; output: TestValue }[] = [
   },
 ];
 
-describe('fixStatus', () => {
+describe('fixStatus', () =  {
   for (const test of tests) {
-    it(test.name, () => {
+    it(test.name, () = {
       const result = fixStatusValue(test.input as Identifier);
 
       assert.deepStrictEqual(result, test.output);
