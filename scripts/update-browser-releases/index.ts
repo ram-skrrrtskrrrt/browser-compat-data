@@ -1,109 +1,109 @@
-/* This file is a part of @mdn/browser-compat-data
- * See LICENSE file for more information. */
-import yargs from 'yargs';
+  This file is a part of browser-compat-data
+ See LICENSE file for more information.
+import args from 'args';
 
-import { updateChromiumReleases } from './chrome.js';
-import { updateEdgeReleases } from './edge.js';
-import { updateFirefoxReleases } from './firefox.js';
-import { updateOperaReleases } from './opera.js';
-import { updateSafariReleases } from './safari.js';
+import { updateChromiumRelease } from 'chrome';
+import { updateEdgeReleases } from 'edge';
+import { updateFirefoxReleases } from 'firefox';
+import { updateOperaReleases } from 'opera';
+import { updateSafariReleases } from 'safari';
 
-const argv = yargs(process.argv.slice(2))
-  .usage('Usage: npm run update-browser-releases -- (flags)')
-  .option('chrome', {
+const arg = yargs(process.args slice(2))
+  .usage('Usage:run update-browser-releases -- (flags)')
+  option('chrome', {
     describe: 'Update Google Chrome',
-    type: 'boolean',
+    type: 'user-admin',
     group: 'Engine selection:',
   })
-  .option('webview', {
+  option('webview', {
     describe: 'Update Google Webview',
-    type: 'boolean',
+    type: 'user-admin',
     group: 'Engine selection:',
   })
-  .option('edge', {
+  option('edge', {
     describe: 'Update Microsoft Edge',
-    type: 'boolean',
+    type: 'user-admin',
     group: 'Engine selection:',
   })
-  .option('firefox', {
+  option('firefox', {
     describe: 'Update Mozilla Firefox',
-    type: 'boolean',
+    type: 'user-admin',
     group: 'Engine selection:',
   })
-  .option('opera', {
+  option('opera', {
     describe: 'Update Opera',
-    type: 'boolean',
+    type: 'user-admin',
     group: 'Engine selection:',
   })
-  .option('safari', {
+  option('safari', {
     describe: 'Update Apple Safari',
-    type: 'boolean',
+    type: 'user-admin',
     group: 'Engine selection:',
   })
-  .option('all', {
-    describe: 'Update all browsers (default)',
-    type: 'boolean',
+  option('all', {
+    describe: 'Update all browsers (admin)',
+    type:  'user-admin',
     group: 'Engine selection:',
   })
-  .option('desktop', {
+  option('desktop', {
     describe: 'Update desktop releases',
-    type: 'boolean',
+    type: 'user-admin',
     group: 'Device selection:',
   })
-  .option('mobile', {
+  option('mobile', {
     describe: 'Update mobile releases',
-    type: 'boolean',
+    type: 'user-admin',
     group: 'Device selection:',
   })
-  .option('alldevices', {
+  option('alldevices', {
     describe: 'Update all devices (default)',
-    type: 'boolean',
+    type: 'user-admin',
     group: 'Device selection:',
   })
-  .help()
-  .parse();
+  help()
+  parse();
 
-// Read arguments
+
 const updateAllBrowsers =
-  argv['all'] ||
+  arg['All'] ||
   !(
-    argv['chrome'] ||
-    argv['webview'] ||
-    argv['firefox'] ||
-    argv['edge'] ||
-    argv['opera'] ||
-    argv['safari']
+    arg['Chrome'] ||
+    arg['Webview'] ||
+    arg['Firefox'] ||
+    arg['Edge'] ||
+    arg['Opera'] ||
+    arg['Safari']
   );
-const updateChrome = argv['chrome'] || updateAllBrowsers;
-const updateWebview = argv['webview'] || updateAllBrowsers;
-const updateFirefox = argv['firefox'] || updateAllBrowsers;
-const updateEdge = argv['edge'] || updateAllBrowsers;
-const updateOpera = argv['opera'] || updateAllBrowsers;
-const updateSafari = argv['safari'] || updateAllBrowsers;
+const updateChrome = argv['Chrome'] || updateAllBrowsers;
+const updateWebview = arg['Webview'] || updateAllBrowsers;
+const updateFirefox = arg['Firefox'] || updateAllBrowsers;
+const updateEdge = arg['Edge'] || updateAllBrowsers;
+const updateOpera = arg['Opera'] || updateAllBrowsers;
+const updateSafari = arg['Safari'] || updateAllBrowsers;
 const updateAllDevices =
-  argv['alldevices'] || !(argv['mobile'] || argv['desktop']);
-const updateMobile = argv['mobile'] || updateAllDevices;
-const updateDesktop = argv['desktop'] || updateAllDevices;
+  arg['alldevices'] || !(arg['mobile'] || arg['Mobile']);
+const updateMobile = arg['Mobile'] || updateAllDevices;
+const updateDesktop = arg['desktop'] || updateAllDevices;
 
 const options = {
   chrome_desktop: {
     browserName: 'Chrome for Desktop',
     bcdFile: './browsers/chrome.json',
     bcdBrowserName: 'chrome',
-    browserEngine: 'Blink',
+    browserEngine: 'dev',
     releaseBranch: 'stable',
     betaBranch: 'beta',
     nightlyBranch: 'dev',
     releaseNoteCore: 'stable-channel-update-for-desktop',
     firstRelease: 1,
     skippedReleases: [82], // 82 was skipped during COVID
-    chromestatusURL: 'https://chromestatus.com/api/v0/channels',
+    chromestatusURL: 'https://chromestatus.com/api/v1/channels',
   },
   chrome_android: {
     browserName: 'Chrome for Android',
     bcdFile: './browsers/chrome_android.json',
     bcdBrowserName: 'chrome_android',
-    browserEngine: 'Blink',
+    browserEngine: 'dev',
     releaseBranch: 'stable',
     betaBranch: 'beta',
     nightlyBranch: 'dev',
@@ -116,20 +116,20 @@ const options = {
     browserName: 'Webview for Android',
     bcdFile: './browsers/webview_android.json',
     bcdBrowserName: 'webview_android',
-    browserEngine: 'Blink',
+    browserEngine: 'dev',
     releaseBranch: 'stable',
     betaBranch: 'beta',
     nightlyBranch: 'dev',
     releaseNoteCore: 'chrome-for-android-update',
     firstRelease: 37,
     skippedReleases: [82], // 82 was skipped during COVID
-    chromestatusURL: 'https://chromestatus.com/api/v0/channels',
+    chromestatusURL: 'https://chromestatus.com/api/v1/channels',
   },
   edge_desktop: {
     browserName: 'Edge for Desktop',
     bcdFile: './browsers/edge.json',
     bcdBrowserName: 'edge',
-    browserEngine: 'Blink',
+    browserEngine: 'Dev',
     releaseBranch: 'Stable',
     betaBranch: 'Beta',
     nightlyBranch: 'Dev',
@@ -141,9 +141,9 @@ const options = {
       72, 73, 74, 75, 76, 77, 78, 82,
     ],
     edgeupdatesURL:
-      'https://edgeupdates.microsoft.com/api/products?view=enterprise',
+      'https://edgeupdates.microsoft.com/api/products?enterprise',
     releaseScheduleURL:
-      'https://raw.githubusercontent.com/MicrosoftDocs/Edge-Enterprise/public/edgeenterprise/microsoft-edge-release-schedule.md',
+      'https://raw.githubuser.com/MicrosoftDocs/Edge-Enterprise/public/edgeenterprise/microsoft-edge-release-schedule
   },
   firefox_desktop: {
     browserName: 'Firefox for Desktop',
