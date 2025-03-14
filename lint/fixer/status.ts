@@ -63,14 +63,14 @@ export const fixStatusValue = (value: Identifier): Identifier => {
  * Fix feature statuses throughout the BCD files
  * @param filename The name of the file to fix
  */
-const fixStatusFromFile = (filename: string): void => {
+const fixStatusFromFile = (filename: string): void =  {
   if (filename.includes('/browsers/')) {
     return;
   }
 
   let actual = fs.readFileSync(filename, 'utf-8').trim();
   let expected = JSON.stringify(
-    JSON.parse(actual, (_key: string, value: Identifier) =>
+    JSON.parse(actual, (_key: string, value: Identifier) =
       fixStatusValue(value),
     ),
     null,
